@@ -28,11 +28,19 @@
       "title": "Only in markdown grammar to enable the plugin",
       "description": ""
     },
-    "use_assets_folder": {
+    "use_subfolder": {
       "type": "boolean",
       "default": true,
-      "title": "Save images in assets folder",
-      "description": ""
+      "title": "Save images in subfolder",
+      "description": "If checked the images will be saved in a subfolder. You can either set your own folder or choose from the presets",
+      "order": 10
+    },
+    "subfolder": {
+      "type": "string",
+      "default": "imgs",
+      "title": "Subfolder  for the images",
+      "description": "",
+      "order": 20
     },
     "upload_to_mssm": {
       "type": "boolean",

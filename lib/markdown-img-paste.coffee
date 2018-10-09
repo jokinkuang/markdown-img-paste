@@ -17,6 +17,16 @@ module.exports =
 
     paste : ->
         if !cursor = atom.workspace.getActiveTextEditor() then return
+
+        #In case text gets posted into the file Atom should behave normal
+        text = clipboard.readText()
+        # if the user copied text we don't care about different formats.
+        # just let him do it
+        if(text)
+            editor = atom.workspace.getActiveTextEditor()
+            editor.insertText(text)
+            return
+
         #只在markdown中使用
         if atom.config.get 'markdown-img-paste.only_markdown'
             if !grammar = cursor.getGrammar() then return
@@ -32,25 +42,33 @@ module.exports =
         img = clipboard.readImage()
         if img.isEmpty() then return
 
+        editor = atom.workspace.getActiveTextEditor()
+        # Words equals the text in the current line of the cursor
+        words = editor.lineTextForBufferRow(editor.getCursorBufferPosition().row)
+        # We delete anything in the current line
+        editor.deleteLine()
+
         #Sets filename based on datetime
-        filename = "markdown-img-paste-#{new Date().format()}.png"
+        filename = words+".png"
 
         #Sets up image assets folder
-        curDirectory = dirname(cursor.getPath())
+        curDirectory = dirname(cursor.getPath()) + "/"
         fullname = join(curDirectory, filename)
 
-        #Checks if assets folder is to be used
-        if atom.config.get 'markdown-img-paste.use_assets_folder'
-          #Finds assets directory path
-          assetsDirectory = join(curDirectory, "assets") + "/"
+        subFolderToUse = ""
+        if atom.config.get 'markdown-img-paste.use_subfolder'
+            #Finds  directory path
+            subFolderToUse = atom.config.get 'markdown-img-paste.subfolder'
 
-          #Creates directory if necessary
-          if !fs.existsSync assetsDirectory
-            fs.mkdirSync assetsDirectory
+            if subFolderToUse != ""
+              assetsDirectory = join(curDirectory, subFolderToUse) + "/"
 
+              #Creates directory if necessary
+              if !fs.existsSync assetsDirectory
+                fs.mkdirSync assetsDirectory
 
-          #Sets full img path
-          fullname = join(assetsDirectory, filename)
+              #Sets full img path
+              fullname = join(assetsDirectory, filename)
 
         fs.writeFileSync fullname, img.toPNG()
 
@@ -86,10 +104,11 @@ module.exports =
 
         #保存在本地
         if !atom.config.get('markdown-img-paste.upload_to_qiniu')
-            mdtext = '![]('
-
-            if atom.config.get 'markdown-img-paste.use_assets_folder'
-                mdtext += 'assets/'
+            mdtext = '!['+filename+']('
+            subFolderToUse = ""
+            if atom.config.get 'markdown-img-paste.use_subfolder'
+                subFolderToUse = atom.config.get 'markdown-img-paste.subfolder'
+                mdtext += subFolderToUse + "/"
 
             mdtext += filename + ')'
 
