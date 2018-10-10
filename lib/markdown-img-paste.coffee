@@ -45,11 +45,20 @@ module.exports =
         editor = atom.workspace.getActiveTextEditor()
         # Words equals the text in the current line of the cursor
         words = editor.lineTextForBufferRow(editor.getCursorBufferPosition().row)
+        words = words.replace(/\s|\\|\//g, "-");
+        # alert words
+
         # We delete anything in the current line
         editor.deleteLine()
+        # Restore the cursor.column to first column
+        position = editor.getCursorBufferPosition()
+        position.column = 0
+        editor.setCursorBufferPosition position
 
         #Sets filename based on datetime
         filename = words+".png"
+        #We dont want spaces in our filename. Special charackters are not considered yet
+        filename = filename.replace(/\s/g, "");
 
         #Sets up image assets folder
         curDirectory = dirname(cursor.getPath()) + "/"
@@ -93,7 +102,7 @@ module.exports =
                         atom.notifications.addError 'Upload failed:' + body.msg
                     else
                         atom.notifications.addSuccess 'OK, image upload to sm.ms!'
-                        mdtext = '![](' + body.data.url + ')'
+                        mdtext = '!['+words+'](' + body.data.url + ')'
                         paste_mdtext cursor, mdtext
 
             delete_file(fullname)
@@ -104,13 +113,14 @@ module.exports =
 
         #保存在本地
         if !atom.config.get('markdown-img-paste.upload_to_qiniu')
-            mdtext = '!['+filename+']('
+            mdtext = '!['+words+']('
             subFolderToUse = ""
             if atom.config.get 'markdown-img-paste.use_subfolder'
                 subFolderToUse = atom.config.get 'markdown-img-paste.subfolder'
                 mdtext += subFolderToUse + "/"
 
             mdtext += filename + ')'
+            mdtext += '\r\n'
 
             paste_mdtext cursor, mdtext
 
@@ -156,7 +166,7 @@ module.exports =
                         atom.notifications.addSuccess 'OK, image upload to qiniu!'
 
                         pastepath =  domain + '/' +  filename
-                        mdtext = '![](' + pastepath + ')'
+                        mdtext = '!['+words+'](' + pastepath + ')'
                         paste_mdtext cursor, mdtext
                     else
                         #上传失败， 处理返回代码
@@ -174,10 +184,11 @@ delete_file = (file_path) ->
         if err
             console.log '未删除本地文件:'+ fullname
 
-paste_mdtext = (cursor, mdtext) ->
-    cursor.insertText mdtext
+paste_mdtext = (cursor, text) ->
+    cursor.insertText text
     position = cursor.getCursorBufferPosition()
-    position.column = position.column - mdtext.length + 2
+    position.row = position.row - 1
+    position.column = position.column + text.length + 1
     cursor.setCursorBufferPosition position
 
 
